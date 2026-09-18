@@ -2,8 +2,6 @@
 
 Aplicação web feita em **Python + Flask** que organiza arquivos automaticamente por tipo (imagens, documentos, planilhas, compactados, etc.), com login individual por usuário. A ideia do projeto é evoluir para um **arquivista pessoal, 100% offline**, que roda localmente na sua máquina sem depender de internet ou de serviços em nuvem.
 
-> Veja [MELHORIAS.md](MELHORIAS.md) para o plano de melhorias e ideias de evolução do projeto.
-
 ## Funcionalidades atuais
 
 - Login e cadastro de usuários (senha com hash, via `werkzeug.security`)
