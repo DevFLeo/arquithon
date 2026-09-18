@@ -1,0 +1,18 @@
+# Documentação interna / anotações de revisão (não versionadas)
+MELHORIAS.md
+Revisao/
+
+# Banco de dados local
+arquivista.db
+
+# Logs
+arquivista.log
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Arquivos organizados pelos usuários
+uploads/
