@@ -41,9 +41,20 @@ Aplicação web feita em **Python + Flask** que organiza arquivos automaticament
    python app.py
    ```
 
-4. Acesse **http://127.0.0.1:5000** no navegador, crie uma conta e comece a enviar arquivos.
+4. O navegador abre sozinho em **http://127.0.0.1:5000**. Crie uma conta e comece a enviar arquivos.
 
 > O banco de dados SQLite (`arquivista.db`) é criado automaticamente na primeira execução.
+
+## Gerar o executável (.exe)
+
+Para distribuir como aplicativo Windows, sem exigir Python instalado na máquina do usuário:
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile --noconsole --name Arquithon --add-data "templates;templates" --add-data "static;static" app.py
+```
+
+O executável é gerado em `dist/Arquithon.exe`. Ao ser aberto, ele sobe o servidor local e abre o navegador automaticamente. O banco de dados e a pasta `uploads/` são criados **ao lado do próprio `.exe`**, então basta mover o executável para onde você quiser que os arquivos fiquem.
 
 ## Estrutura do projeto
 

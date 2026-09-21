@@ -16,3 +16,7 @@ venv/
 
 # Arquivos organizados pelos usuários
 uploads/
+
+# Artefatos de build do PyInstaller
+build/
+dist/

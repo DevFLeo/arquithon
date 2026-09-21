@@ -1,6 +1,9 @@
 # app.py - Versão Completa para Deploy no Render
 
 import os
+import sys
+import threading
+import webbrowser
 # A nova importação para o sistema de login
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 # A nova importação para o banco de dados
@@ -11,9 +14,25 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
 
 # --- 1. Configurações e Inicialização ---
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+IS_FROZEN = getattr(sys, 'frozen', False)
 
-app = Flask(__name__)
+if IS_FROZEN:
+    # Rodando como .exe (PyInstaller): os dados ficam ao lado do executável,
+    # enquanto templates/static são extraídos numa pasta temporária (sys._MEIPASS).
+    BASE_DIR = os.path.dirname(sys.executable)
+    RESOURCE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    RESOURCE_DIR = BASE_DIR
+
+HOST = '127.0.0.1'
+PORT = 5000
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(RESOURCE_DIR, 'templates'),
+    static_folder=os.path.join(RESOURCE_DIR, 'static'),
+)
 
 # Configura a chave secreta. Em produção, o Render a fornecerá como uma variável de ambiente.
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'uma-chave-de-desenvolvimento-super-segura')
@@ -155,7 +174,12 @@ def upload_file():
     return redirect(url_for('index'))
 
 # --- 7. Bloco de Execução Principal ---
+def abrir_navegador():
+    webbrowser.open(f'http://{HOST}:{PORT}')
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all() # Cria as tabelas do banco de dados se não existirem
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    # Dá um instante para o servidor subir antes de abrir a página.
+    threading.Timer(1.5, abrir_navegador).start()
+    app.run(host=HOST, port=PORT, debug=False)
