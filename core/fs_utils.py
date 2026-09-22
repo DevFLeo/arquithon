@@ -24,3 +24,21 @@ def open_and_select_file(path: str) -> None:
         subprocess.run(['explorer', '/select,', os.path.normpath(path)])
     else:
         subprocess.Popen(['xdg-open', os.path.dirname(path)])
+
+
+def collect_files(entries) -> list:
+    """Expande uma lista de caminhos em arquivos; pastas viram seu conteúdo.
+
+    Serve tanto para o botão "Selecionar Pasta" quanto para o arrastar e
+    soltar, onde o usuário pode largar arquivos e pastas na mesma leva. O que
+    não existir mais (um atalho quebrado, por exemplo) é ignorado em silêncio,
+    já que quem chama só quer a lista do que dá para organizar.
+    """
+    arquivos = []
+    for entry in entries:
+        if os.path.isdir(entry):
+            for root, _dirs, files in os.walk(entry):
+                arquivos.extend(os.path.join(root, nome) for nome in sorted(files))
+        elif os.path.isfile(entry):
+            arquivos.append(entry)
+    return arquivos

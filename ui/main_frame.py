@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from core import fs_utils, organizer, paths, search
+from ui import dnd, result_dialog, styles
 
 
 class MainFrame(ttk.Frame):
@@ -12,6 +13,7 @@ class MainFrame(ttk.Frame):
         super().__init__(app, style='App.TFrame', padding=24)
         self.item_paths = {}  # iid da árvore -> ('pasta' | 'arquivo', caminho absoluto)
         self.last_operations = []  # última leva de Operation, para permitir desfazer
+        self.organizing = False  # um drop pode chegar com um diálogo aberto; um de cada vez
 
         self._build_header()
         self._build_organize_card()
@@ -19,6 +21,11 @@ class MainFrame(ttk.Frame):
         self._build_results_tree()
 
         self._show_categorized_view()
+
+        # Sem suporte a arrastar e soltar (outro sistema, ou API indisponível),
+        # a área de soltar some em vez de ficar prometendo o que não funciona.
+        if not dnd.enable_file_drop(app, self._on_files_dropped):
+            self.drop_zone.grid_remove()
 
         app.bind('<Control-o>', lambda e: self._select_files())
         app.bind('<Control-f>', lambda e: self._focus_search())
@@ -64,8 +71,15 @@ class MainFrame(ttk.Frame):
                                     command=self._undo_last_organize, state='disabled')
         self.undo_btn.pack(side='left', padx=(10, 0))
 
+        self.drop_zone = tk.Label(
+            card, text='⤓  ou arraste arquivos e pastas aqui',
+            font=('Segoe UI', 10), bg=styles.COLORS['card'], fg=styles.COLORS['muted'],
+            highlightthickness=1, highlightbackground=styles.COLORS['border'], pady=14,
+        )
+        self.drop_zone.grid(row=3, column=0, columnspan=3, sticky='ew', pady=(14, 0))
+
         self.progress = ttk.Progressbar(card, mode='determinate')
-        self.progress.grid(row=3, column=0, columnspan=3, sticky='ew', pady=(12, 0))
+        self.progress.grid(row=4, column=0, columnspan=3, sticky='ew', pady=(12, 0))
         self.progress.grid_remove()
 
     def _build_search_card(self):
@@ -130,60 +144,83 @@ class MainFrame(ttk.Frame):
         folder = filedialog.askdirectory(title='Selecione uma pasta para organizar')
         if not folder:
             return
+        self._organize_entries([folder])
 
-        folder_norm = os.path.normcase(os.path.normpath(folder))
-        base_norm = os.path.normcase(os.path.normpath(paths.BASE_DIR))
-        if folder_norm == base_norm or folder_norm.startswith(base_norm + os.sep):
-            messagebox.showwarning('Organização', 'Não é possível organizar a própria pasta do Arquithon.')
+    def _on_files_dropped(self, dropped):
+        """Recebe o que o usuário soltou na janela (arquivos e/ou pastas).
+
+        O Windows entrega o drop mesmo com um diálogo nosso aberto, que é o
+        único caminho por onde duas organizações começariam ao mesmo tempo:
+        nesse caso o drop é ignorado, e o usuário arrasta de novo depois.
+        """
+        if self.organizing:
+            return
+        self.winfo_toplevel().focus_force()
+        self._organize_entries(dropped)
+
+    def _organize_entries(self, entries):
+        """Organiza uma leva de caminhos, abrindo as pastas recursivamente."""
+        if any(self._is_inside_app(entry) for entry in entries):
+            messagebox.showwarning('Organização',
+                                   'Não é possível organizar arquivos de dentro da própria pasta do Arquithon.')
             return
 
-        arquivos = [os.path.join(root, nome) for root, _dirs, files in os.walk(folder) for nome in files]
+        arquivos = fs_utils.collect_files(entries)
         if not arquivos:
-            messagebox.showinfo('Organização', 'A pasta selecionada não tem arquivos.')
+            messagebox.showinfo('Organização', 'Nenhum arquivo encontrado para organizar.')
             return
         self._organize_paths(arquivos)
+
+    @staticmethod
+    def _is_inside_app(path):
+        """O Arquithon não organiza a si mesmo: evita copiar uploads/ dentro de uploads/."""
+        alvo = os.path.normcase(os.path.normpath(path))
+        base = os.path.normcase(os.path.normpath(paths.BASE_DIR))
+        return alvo == base or alvo.startswith(base + os.sep)
 
     def _focus_search(self):
         self.search_entry.focus_set()
         self.search_entry.select_range(0, 'end')
 
     def _organize_paths(self, selected):
-        mode_key = organizer.ORG_MODE_KEY_BY_LABEL[self.mode_var.get()]
-        move = self.move_var.get()
-
-        if move and not messagebox.askyesno(
-            'Mover arquivos',
-            f'Isso vai remover {len(selected)} arquivo(s) do local de origem.\n\nContinuar?',
-        ):
-            return
-
-        self.progress.grid()
-        self.progress.configure(maximum=len(selected), value=0)
-
-        def on_progress(feito, total):
-            self.progress.configure(value=feito)
-            self.update_idletasks()
-
+        self.organizing = True
         try:
-            resultado = organizer.organize_files(selected, mode=mode_key, move=move, on_progress=on_progress)
+            mode_key = organizer.ORG_MODE_KEY_BY_LABEL[self.mode_var.get()]
+            move = self.move_var.get()
+
+            if move and not messagebox.askyesno(
+                'Mover arquivos',
+                f'Isso vai remover {len(selected)} arquivo(s) do local de origem.\n\nContinuar?',
+            ):
+                return
+
+            self.progress.grid()
+            self.progress.configure(maximum=len(selected), value=0)
+
+            def on_progress(feito, total):
+                self.progress.configure(value=feito)
+                self.update_idletasks()
+
+            try:
+                resultado = organizer.organize_files(selected, mode=mode_key, move=move, on_progress=on_progress)
+            finally:
+                self.progress.grid_remove()
+
+            if not resultado.successful:
+                messagebox.showwarning('Organização', 'Nenhum arquivo pôde ser organizado.')
+                return
+
+            self.last_operations = resultado.operations
+            self.undo_btn.configure(state='normal')
+            self._show_categorized_view()
+
+            escolha = result_dialog.show(self.winfo_toplevel(), resultado, move)
+            if escolha == 'reverter':
+                self._undo_last_organize()
+            elif escolha == 'abrir':
+                self._open_root_folder()
         finally:
-            self.progress.grid_remove()
-
-        if not resultado.successful:
-            messagebox.showwarning('Organização', 'Nenhum arquivo pôde ser organizado.')
-            return
-
-        self.last_operations = resultado.operations
-        self.undo_btn.configure(state='normal')
-
-        verbo = 'movidos' if move else 'organizados'
-        msg = f'{resultado.successful} arquivo(s) {verbo} com sucesso!'
-        if resultado.failed:
-            acao = 'movidos' if move else 'copiados'
-            msg += f'\n{resultado.failed} arquivo(s) não puderam ser {acao}.'
-        self._show_categorized_view()
-        if messagebox.askyesno('Organização concluída', msg + '\n\nDeseja abrir a pasta agora?'):
-            self._open_root_folder()
+            self.organizing = False
 
     def _undo_last_organize(self):
         if not self.last_operations:

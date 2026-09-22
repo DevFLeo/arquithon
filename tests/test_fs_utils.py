@@ -40,5 +40,26 @@ class FsUtilsTestCase(unittest.TestCase):
         mock_run.assert_called_once_with(['explorer', '/select,', os.path.normpath(arquivo)])
 
 
+    def test_collect_files_expande_pasta_e_mantem_arquivos_soltos(self):
+        pasta = os.path.join(self.tmp_dir, 'pasta')
+        os.makedirs(os.path.join(pasta, 'dentro'))
+        for caminho in (os.path.join(pasta, 'a.txt'), os.path.join(pasta, 'dentro', 'b.txt')):
+            with open(caminho, 'wb') as f:
+                f.write(b'x')
+        avulso = os.path.join(self.tmp_dir, 'solto.png')
+        with open(avulso, 'wb') as f:
+            f.write(b'y')
+
+        arquivos = fs_utils.collect_files([pasta, avulso])
+        self.assertEqual(sorted(arquivos), sorted([
+            os.path.join(pasta, 'a.txt'),
+            os.path.join(pasta, 'dentro', 'b.txt'),
+            avulso,
+        ]))
+
+    def test_collect_files_ignora_caminho_inexistente(self):
+        self.assertEqual(fs_utils.collect_files([os.path.join(self.tmp_dir, 'fantasma.txt')]), [])
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -4,11 +4,11 @@ Arquithon é um aplicativo nativo, feito em Python com Tkinter, que organiza arq
 
 ## O que ele faz
 
-Você escolhe um ou mais arquivos (ou uma pasta inteira, organizada recursivamente) pelo diálogo nativo do sistema, e o Arquithon copia cada um para a subpasta certa dentro de `uploads/`, de acordo com o critério de organização escolhido. Por tipo de arquivo, imagens vão para `imagens/png`, documentos para `documentos/pdf`, músicas para `multimedia/audio` e assim por diante — o dicionário de extensões cobre imagens, documentos, planilhas, apresentações, e-books, áudio, vídeo, arquivos compactados, código-fonte, design/CAD, executáveis e fontes. Qualquer extensão fora desse mapa cai em `outros/<extensão>`, então nada fica sem categoria.
+Você escolhe um ou mais arquivos (ou uma pasta inteira, organizada recursivamente) pelo diálogo nativo do sistema — ou simplesmente arrasta arquivos e pastas do Explorer para dentro da janela —, e o Arquithon copia cada um para a subpasta certa dentro de `uploads/`, de acordo com o critério de organização escolhido. Por tipo de arquivo, imagens vão para `imagens/png`, documentos para `documentos/pdf`, músicas para `multimedia/audio` e assim por diante — o dicionário de extensões cobre imagens, documentos, planilhas, apresentações, e-books, áudio, vídeo, arquivos compactados, código-fonte, design/CAD, executáveis e fontes. Qualquer extensão fora desse mapa cai em `outros/<extensão>`, então nada fica sem categoria.
 
 Além de por tipo, dá para organizar por data de modificação (agrupando em pastas de ano e mês), por nome do arquivo (ordem alfabética) ou por tamanho (pequenos, médios e grandes). O critério escolhido fica salvo em `config.json`, ao lado do executável, e é lembrado da próxima vez que o app abrir.
 
-Depois de organizar, o Arquithon pergunta se você quer abrir a pasta na hora, e também há um botão "Abrir Pasta de Arquivos" sempre visível. Clicar com o botão direito em qualquer categoria ou arquivo da lista abre o Explorer do Windows direto naquele lugar. Se dois arquivos organizados tiverem o mesmo nome, o segundo recebe um sufixo `(2)`, `(3)`... para nunca sobrescrever o primeiro sem avisar.
+Terminada a organização, aparece a lista do que foi para onde: cada arquivo com a categoria em que caiu, e o aviso de "salvo como ..." quando um homônimo obrigou a renomear. O botão `OK` já vem selecionado (Enter ou Esc fecham), ao lado de `Reverter`, que desfaz aquela leva na hora, e de `Abrir pasta`, para conferir no Explorer. Também há um botão "Abrir Pasta de Arquivos" sempre visível. Clicar com o botão direito em qualquer categoria ou arquivo da lista abre o Explorer do Windows direto naquele lugar. Se dois arquivos organizados tiverem o mesmo nome, o segundo recebe um sufixo `(2)`, `(3)`... para nunca sobrescrever o primeiro sem avisar.
 
 Por padrão os arquivos são copiados para `uploads/`, mantendo o original no lugar. Tem uma opção "Mover em vez de copiar" para quem quer tirar o arquivo da origem de vez — nesse caso o app pede confirmação antes, já que é uma ação que remove o original. Uma barra de progresso aparece durante a organização de vários arquivos, e um botão "Desfazer última organização" some quando não há nada a desfazer e some depois de usado; ele reverte exatamente a última leva (cópias são apagadas, arquivos movidos voltam para onde estavam).
 
@@ -16,11 +16,13 @@ Tem também uma busca: digite um trecho do nome (ou do conteúdo, para arquivos 
 
 Clicar com o botão direito num arquivo já organizado também oferece "Excluir arquivo" — remove definitivamente (sem lixeira), então o app sempre pede confirmação antes. Não dá para excluir uma categoria inteira de uma vez: só arquivo por arquivo, de propósito, para uma exclusão em massa não acontecer sem querer.
 
+Arrastar e soltar funciona em qualquer ponto da janela, com arquivos e pastas na mesma leva: as pastas entram inteiras, recursivamente, e tudo segue o mesmo critério de organização e a mesma opção de mover em vez de copiar. Soltar a própria pasta do Arquithon é recusado, para o app não organizar a si mesmo. Se o sistema não oferecer suporte (fora do Windows), a área de soltar simplesmente não aparece.
+
 Atalhos de teclado: `Ctrl+O` abre o seletor de arquivos, `Ctrl+F` foca o campo de busca.
 
 ## Tecnologia
 
-Tudo usa apenas a biblioteca padrão do Python — Tkinter para a interface, `json` para guardar a preferência de organização, `shutil`/`os` para mover e organizar os arquivos, `dataclasses` para o índice de busca. Nenhuma dependência externa é necessária para rodar `python app.py`; o PyInstaller só entra na hora de gerar o `.exe`.
+Tudo usa apenas a biblioteca padrão do Python — Tkinter para a interface, `json` para guardar a preferência de organização, `shutil`/`os` para mover e organizar os arquivos, `dataclasses` para o índice de busca, `ctypes` para receber os arquivos arrastados do Explorer (o Tkinter puro não recebe drag and drop; em vez de depender do `tkinterdnd2` e da extensão Tcl que vem com ele, o app fala direto com a API do Windows). Nenhuma dependência externa é necessária para rodar `python app.py`; o PyInstaller só entra na hora de gerar o `.exe`.
 
 O código é dividido por responsabilidade: `core/` guarda toda a regra de negócio (caminhos, organização, busca, integração com o Explorer) sem depender de Tkinter, e `ui/` guarda só a interface, que consome o `core`. Essa separação é o que torna fácil testar a lógica isoladamente (veja `tests/`) e crescer o app sem esbarrar num arquivo gigante — um novo critério de organização, por exemplo, é só uma função nova em `core/organizer.py`.
 
@@ -58,6 +60,8 @@ arquithon/
 │   └── fs_utils.py        abrir pastas/arquivos no Explorer
 ├── ui/                  interface Tkinter, consome o core
 │   ├── styles.py
+│   ├── dnd.py            arrastar e soltar arquivos do Explorer (API do Windows)
+│   ├── result_dialog.py  lista de "o que foi para onde" ao fim da organização
 │   ├── app_window.py
 │   └── main_frame.py
 ├── tests/               testes de core/ (unittest, sem dependências externas)
