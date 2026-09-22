@@ -142,6 +142,15 @@ class OrganizerTestCase(unittest.TestCase):
         with self.assertRaises(OSError):
             organizer.delete_file(os.path.join(paths.UPLOAD_FOLDER, 'nao_existe.txt'))
 
+    def test_format_category_label_preserva_maiusculas_de_unidade(self):
+        rotulo = organizer.format_category_label(os.path.join('tamanho', 'pequenos (menos de 1MB)'))
+        self.assertIn('1MB', rotulo)
+        self.assertNotIn('1mb', rotulo)
+
+    def test_format_category_label_capitaliza_mes_mesmo_apos_numero(self):
+        rotulo = organizer.format_category_label(os.path.join('2024', '01 - janeiro'))
+        self.assertIn('01 - Janeiro', rotulo)
+
 
 if __name__ == '__main__':
     unittest.main()

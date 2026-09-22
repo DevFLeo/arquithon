@@ -150,10 +150,24 @@ def save_move_default(value: bool) -> None:
     config.set('move_default', value)
 
 
+def _capitalizar_primeira_letra(texto: str) -> str:
+    """Maiúscula só a primeira letra encontrada, sem mexer no resto da string.
+
+    `str.capitalize()` faria isso e ainda forçaria o resto para minúsculo, o
+    que quebra tanto siglas já capitalizadas (ex.: "1MB" viraria "1mb")
+    quanto textos que começam com número (ex.: "01 - janeiro" nunca teria a
+    primeira letra alterada, porque o primeiro caractere é um dígito).
+    """
+    for i, char in enumerate(texto):
+        if char.isalpha():
+            return texto[:i] + char.upper() + texto[i + 1:]
+    return texto
+
+
 def format_category_label(rel_path: str) -> str:
     partes = rel_path.split(os.sep)
     icone = '📅' if partes[0].isdigit() else CATEGORY_ICONS.get(partes[0], '📁')
-    texto = ' › '.join(p if p.isdigit() else p.capitalize() for p in partes)
+    texto = ' › '.join(p if p.isdigit() else _capitalizar_primeira_letra(p) for p in partes)
     return f'{icone} {texto}'
 
 
