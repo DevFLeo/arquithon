@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from core import fs_utils, organizer, paths, search
-from ui import dnd, result_dialog, styles
+from ui import dnd, result_dialog, settings_dialog, styles
 
 
 class MainFrame(ttk.Frame):
@@ -34,8 +34,12 @@ class MainFrame(ttk.Frame):
     def _build_header(self):
         header = ttk.Frame(self, style='App.TFrame')
         header.pack(fill='x')
-        ttk.Label(header, text='🗂️ Arquithon', style='Title.TLabel').pack(anchor='w')
-        ttk.Label(header, text='Desenvolvido por Leonardo Frez', style='Subtitle.TLabel').pack(anchor='w')
+        titulos = ttk.Frame(header, style='App.TFrame')
+        titulos.pack(side='left')
+        ttk.Label(titulos, text='🗂️ Arquithon', style='Title.TLabel').pack(anchor='w')
+        ttk.Label(titulos, text='Desenvolvido por Leonardo Frez', style='Subtitle.TLabel').pack(anchor='w')
+        ttk.Button(header, text='⚙️ Configurações', style='Secondary.TButton',
+                   command=self._open_settings).pack(side='right', anchor='n')
         ttk.Separator(self).pack(fill='x', pady=14)
 
     def _build_organize_card(self):
@@ -43,8 +47,8 @@ class MainFrame(ttk.Frame):
         card.pack(fill='x', pady=(0, 14))
         card.columnconfigure(2, weight=1)
 
-        ttk.Label(card, text='Organizar novos arquivos', style='Card.TLabel',
-                  font=('Segoe UI', 12, 'bold')).grid(row=0, column=0, columnspan=3, sticky='w', pady=(0, 10))
+        ttk.Label(card, text='Organizar novos arquivos',
+                  style='CardTitle.TLabel').grid(row=0, column=0, columnspan=3, sticky='w', pady=(0, 10))
         ttk.Label(card, text='Organizar por:', style='Card.TLabel').grid(row=1, column=0, sticky='w')
 
         self.mode_var = tk.StringVar(value=organizer.ORG_MODE_LABEL_BY_KEY[organizer.load_org_mode()])
@@ -55,7 +59,7 @@ class MainFrame(ttk.Frame):
         mode_combo.grid(row=1, column=1, sticky='w', padx=(8, 0))
         mode_combo.bind('<<ComboboxSelected>>', self._on_mode_change)
 
-        self.move_var = tk.BooleanVar(value=False)
+        self.move_var = tk.BooleanVar(value=organizer.load_move_default())
         ttk.Checkbutton(card, text='Mover em vez de copiar (remove da origem)',
                         variable=self.move_var).grid(row=1, column=2, sticky='w', padx=(14, 0))
 
@@ -71,11 +75,9 @@ class MainFrame(ttk.Frame):
                                     command=self._undo_last_organize, state='disabled')
         self.undo_btn.pack(side='left', padx=(10, 0))
 
-        self.drop_zone = tk.Label(
-            card, text='⤓  ou arraste arquivos e pastas aqui',
-            font=('Segoe UI', 10), bg=styles.COLORS['card'], fg=styles.COLORS['muted'],
-            highlightthickness=1, highlightbackground=styles.COLORS['border'], pady=14,
-        )
+        self.drop_zone = tk.Label(card, text='⤓  ou arraste arquivos e pastas aqui',
+                                  highlightthickness=1, pady=14)
+        styles.style_drop_zone(self.drop_zone)
         self.drop_zone.grid(row=3, column=0, columnspan=3, sticky='ew', pady=(14, 0))
 
         self.progress = ttk.Progressbar(card, mode='determinate')
@@ -86,21 +88,23 @@ class MainFrame(ttk.Frame):
         card = ttk.Frame(self, style='Card.TFrame', padding=18)
         card.pack(fill='x', pady=(0, 18))
 
-        ttk.Label(card, text='Buscar arquivos organizados', style='Card.TLabel',
-                  font=('Segoe UI', 12, 'bold')).grid(row=0, column=0, columnspan=2, sticky='w', pady=(0, 10))
+        ttk.Label(card, text='Buscar arquivos organizados',
+                  style='CardTitle.TLabel').grid(row=0, column=0, columnspan=2, sticky='w', pady=(0, 6))
+        ttk.Label(card, text='Procura no nome do arquivo e também no nome da pasta.',
+                  style='CardSubtitle.TLabel').grid(row=1, column=0, columnspan=2, sticky='w', pady=(0, 10))
 
         self.search_var = tk.StringVar()
         self.search_entry = ttk.Entry(card, textvariable=self.search_var, width=42)
-        self.search_entry.grid(row=1, column=0, sticky='w')
+        self.search_entry.grid(row=2, column=0, sticky='w')
         self.search_entry.bind('<Return>', lambda e: self._run_search())
 
         self.search_content_var = tk.BooleanVar(value=search.load_search_content_pref())
         ttk.Checkbutton(card, text='Também no conteúdo de arquivos de texto',
                         variable=self.search_content_var,
-                        command=self._on_search_content_change).grid(row=1, column=1, sticky='w', padx=(14, 0))
+                        command=self._on_search_content_change).grid(row=2, column=1, sticky='w', padx=(14, 0))
 
         btn_row = ttk.Frame(card, style='Card.TFrame')
-        btn_row.grid(row=2, column=0, columnspan=2, sticky='w', pady=(12, 0))
+        btn_row.grid(row=3, column=0, columnspan=2, sticky='w', pady=(12, 0))
         ttk.Button(btn_row, text='🔍 Buscar', style='Accent.TButton',
                    command=self._run_search).pack(side='left')
         ttk.Button(btn_row, text='Limpar busca', style='Secondary.TButton',
@@ -124,8 +128,25 @@ class MainFrame(ttk.Frame):
         vsb.pack(side='right', fill='y')
 
         self.context_menu = tk.Menu(self.tree, tearoff=0)
+        styles.style_menu(self.context_menu)
         self.tree.bind('<Button-3>', self._show_context_menu)
         self.tree.bind('<Double-1>', lambda e: self._open_selected())
+        self.tree.bind('<Button-1>', self._on_tree_click)
+
+    # --- Configurações ---
+    def _open_settings(self):
+        if settings_dialog.show(self.winfo_toplevel()):
+            self._apply_appearance()
+
+    def _apply_appearance(self):
+        """Redesenha a tela com o tema e o tamanho de fonte escolhidos.
+
+        Os widgets ttk seguem os estilos nomeados sozinhos; só os dois que não
+        são ttk (a área de soltar e o menu de contexto) precisam ser avisados.
+        """
+        styles.apply(self.winfo_toplevel())
+        styles.style_drop_zone(self.drop_zone)
+        styles.style_menu(self.context_menu)
 
     # --- Organização ---
     def _on_mode_change(self, event=None):
@@ -285,6 +306,24 @@ class MainFrame(ttk.Frame):
             data = organizer.format_modified_date(item.modified)
             iid = self.tree.insert('', 'end', text=f'📄 {item.name}  —  {categoria}  ·  {tamanho}  ·  {data}')
             self.item_paths[iid] = ('arquivo', item.path)
+
+    def _on_tree_click(self, event):
+        """Clicar em qualquer parte da linha de uma categoria expande/recolhe ela.
+
+        Por padrão o Treeview só reage à setinha de expandir; isso obriga a
+        mirar num alvo de poucos pixels. Deixa o clique na setinha com o
+        comportamento padrão (para não abrir e fechar de novo) e trata o
+        resto da linha aqui, sem interferir na seleção normal do clique.
+        """
+        iid = self.tree.identify_row(event.y)
+        if not iid:
+            return
+        info = self.item_paths.get(iid)
+        if not info or info[0] != 'pasta':
+            return
+        if self.tree.identify_element(event.x, event.y) == 'Treeitem.indicator':
+            return
+        self.tree.item(iid, open=not self.tree.item(iid, 'open'))
 
     def _show_context_menu(self, event):
         iid = self.tree.identify_row(event.y)

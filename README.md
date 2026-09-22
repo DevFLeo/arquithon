@@ -12,11 +12,15 @@ Terminada a organização, aparece a lista do que foi para onde: cada arquivo co
 
 Por padrão os arquivos são copiados para `uploads/`, mantendo o original no lugar. Tem uma opção "Mover em vez de copiar" para quem quer tirar o arquivo da origem de vez — nesse caso o app pede confirmação antes, já que é uma ação que remove o original. Uma barra de progresso aparece durante a organização de vários arquivos, e um botão "Desfazer última organização" some quando não há nada a desfazer e some depois de usado; ele reverte exatamente a última leva (cópias são apagadas, arquivos movidos voltam para onde estavam).
 
-Tem também uma busca: digite um trecho do nome (ou do conteúdo, para arquivos de texto como `.txt`, `.md`, `.py`, `.json` e afins) e o app varre tudo que já foi organizado e mostra os resultados na hora, cada um já com a categoria, o tamanho e a data de modificação. Formatos binários como PDF, DOCX ou imagens continuam pesquisáveis pelo nome, só o conteúdo deles que não é lido. A preferência de buscar também no conteúdo fica salva em `config.json`, igual ao critério de organização.
+Tem também uma busca: digite um trecho do nome, da pasta (ex.: "imagens" ou "documentos pdf") ou do conteúdo (para arquivos de texto como `.txt`, `.md`, `.py`, `.json` e afins), e o app varre tudo que já foi organizado e mostra os resultados na hora, cada um já com a categoria, o tamanho e a data de modificação. Quem casa pelo nome do arquivo aparece antes de quem casa só pela pasta, que aparece antes de quem casa pelo conteúdo. Formatos binários como PDF, DOCX ou imagens continuam pesquisáveis pelo nome, só o conteúdo deles que não é lido. A preferência de buscar também no conteúdo fica salva em `config.json`, igual ao critério de organização.
 
 Clicar com o botão direito num arquivo já organizado também oferece "Excluir arquivo" — remove definitivamente (sem lixeira), então o app sempre pede confirmação antes. Não dá para excluir uma categoria inteira de uma vez: só arquivo por arquivo, de propósito, para uma exclusão em massa não acontecer sem querer.
 
+Para expandir ou recolher uma categoria na lista, não é preciso mirar na setinha: clicar em qualquer ponto da linha (o nome da categoria, os ícones, o espaço em branco) já abre ou fecha ela. A setinha continua funcionando do jeito de sempre.
+
 Arrastar e soltar funciona em qualquer ponto da janela, com arquivos e pastas na mesma leva: as pastas entram inteiras, recursivamente, e tudo segue o mesmo critério de organização e a mesma opção de mover em vez de copiar. Soltar a própria pasta do Arquithon é recusado, para o app não organizar a si mesmo. Se o sistema não oferecer suporte (fora do Windows), a área de soltar simplesmente não aparece.
+
+Um botão "⚙️ Configurações" no canto superior direito abre o tamanho da fonte (pequena/média/grande), o tema (claro/escuro), se a caixa "Mover em vez de copiar" já deve vir marcada e se a janela deve reabrir do tamanho e no lugar em que foi fechada da última vez. Tudo isso também fica salvo em `config.json` e some ou aparece na hora, sem precisar reabrir o app — exceto a posição/tamanho da janela e a caixa de mover, que só valem a partir da próxima vez que o app abrir.
 
 Atalhos de teclado: `Ctrl+O` abre o seletor de arquivos, `Ctrl+F` foca o campo de busca.
 
@@ -59,9 +63,11 @@ arquithon/
 │   ├── search.py         indexação e busca nos arquivos organizados
 │   └── fs_utils.py        abrir pastas/arquivos no Explorer
 ├── ui/                  interface Tkinter, consome o core
-│   ├── styles.py
-│   ├── dnd.py            arrastar e soltar arquivos do Explorer (API do Windows)
-│   ├── result_dialog.py  lista de "o que foi para onde" ao fim da organização
+│   ├── styles.py          paleta de cores e tamanhos de fonte (tema claro/escuro)
+│   ├── dnd.py             arrastar e soltar arquivos do Explorer (API do Windows)
+│   ├── result_dialog.py   lista de "o que foi para onde" ao fim da organização
+│   ├── settings_dialog.py tela de configurações (fonte, tema, padrões)
+│   ├── window_state.py    lembra tamanho e posição da janela entre uma sessão e outra
 │   ├── app_window.py
 │   └── main_frame.py
 ├── tests/               testes de core/ (unittest, sem dependências externas)

@@ -74,19 +74,37 @@ def build_index() -> list[IndexedFile]:
     return index
 
 
+def _searchable_folder(item: IndexedFile) -> str:
+    """A pasta do arquivo dentro de uploads/, em texto buscável.
+
+    A barra vira espaço para "imagens png" casar tanto com quem digita
+    "imagens" quanto com "png" — e para o separador do sistema não mudar o
+    resultado da busca.
+    """
+    return os.path.dirname(item.rel_path).lower().replace(os.sep, ' ').replace('/', ' ')
+
+
 def search(index: list[IndexedFile], query: str, include_content: bool = True) -> list[IndexedFile]:
-    """Filtra o índice pelo nome do arquivo e, opcionalmente, pelo conteúdo."""
-    query = query.strip().lower()
+    """Filtra o índice pelo nome do arquivo, pela pasta e, opcionalmente, pelo conteúdo.
+
+    A ordem da saída é a ordem da confiança: quem casou pelo nome vem antes de
+    quem casou só pela pasta, e o conteúdo vem por último. Sem isso, procurar
+    por "contrato" deixaria o arquivo chamado contrato.pdf atrás de uma
+    categoria inteira que por acaso tem essa palavra no caminho.
+    """
+    query = query.strip().lower().replace(os.sep, ' ').replace('/', ' ')
     if not query:
         return list(index)
 
-    results = []
+    por_nome, por_pasta, por_conteudo = [], [], []
     for item in index:
         if query in item.name.lower():
-            results.append(item)
+            por_nome.append(item)
+        elif query in _searchable_folder(item):
+            por_pasta.append(item)
         elif include_content and item.snippet and query in item.snippet.lower():
-            results.append(item)
-    return results
+            por_conteudo.append(item)
+    return por_nome + por_pasta + por_conteudo
 
 
 def load_search_content_pref() -> bool:

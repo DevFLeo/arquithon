@@ -2,7 +2,7 @@
 
 import tkinter as tk
 
-from ui import styles
+from ui import styles, window_state
 from ui.main_frame import MainFrame
 
 
@@ -12,7 +12,11 @@ class ArquithonApp(tk.Tk):
         self.title('Arquithon - Arquivista Digital')
         self.geometry('820x640')
         self.minsize(640, 480)
-        self.configure(bg=styles.COLORS['bg'])
 
-        styles.apply(self)
+        styles.apply(self)  # já deixa a janela com a cor do tema escolhido
         MainFrame(self).pack(fill='both', expand=True)
+
+        # Depois de montar a tela: a geometria salva tem a palavra final sobre
+        # o tamanho que os widgets pediram.
+        window_state.restore(self)
+        window_state.watch(self)

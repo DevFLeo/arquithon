@@ -97,15 +97,28 @@ def _enable_windows_drop(widget, on_drop) -> bool:
 
     _installed_procs.append(proc)
     shell32.DragAcceptFiles(hwnd, True)
-    _poll(widget, pendentes, on_drop)
+
+    # O id do `after` agendado fica aqui para poder ser cancelado no fechamento
+    # (ver abaixo) -- sem isso, o último polling pendente dispara depois do
+    # widget destruído e o Tcl imprime um erro "invalid command name" toda
+    # vez que o app fecha.
+    agendado = {'id': None}
+
+    def cancelar(event=None):
+        if agendado['id']:
+            widget.after_cancel(agendado['id'])
+            agendado['id'] = None
+
+    widget.bind('<Destroy>', cancelar, add='+')
+    _poll(widget, pendentes, on_drop, agendado)
     return True
 
 
-def _poll(widget, pendentes, on_drop) -> None:
+def _poll(widget, pendentes, on_drop, agendado) -> None:
     """Entrega à interface, já no laço do Tk, o que o WNDPROC anotou."""
     while pendentes:
         on_drop(pendentes.popleft())
-    widget.after(POLL_MS, _poll, widget, pendentes, on_drop)
+    agendado['id'] = widget.after(POLL_MS, _poll, widget, pendentes, on_drop, agendado)
 
 
 def _query_dropped_paths(shell32, hdrop) -> list:

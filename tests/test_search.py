@@ -77,5 +77,29 @@ class SearchTestCase(unittest.TestCase):
         self.assertFalse(search.load_search_content_pref())
 
 
+    def test_busca_encontra_pelo_nome_da_pasta(self):
+        self._write('imagens/png/foto.png')
+        self._write('documentos/pdf/relatorio.pdf')
+        index = search.build_index()
+
+        por_categoria = search.search(index, 'imagens')
+        self.assertEqual([item.name for item in por_categoria], ['foto.png'])
+
+        por_subpasta = search.search(index, 'pdf')
+        self.assertEqual([item.name for item in por_subpasta], ['relatorio.pdf'])
+
+    def test_busca_por_pasta_aceita_caminho_com_barra(self):
+        self._write('imagens/png/foto.png')
+        index = search.build_index()
+        self.assertEqual([i.name for i in search.search(index, 'imagens/png')], ['foto.png'])
+
+    def test_quem_casa_pelo_nome_vem_antes_de_quem_casa_pela_pasta(self):
+        self._write('contratos/2026/anexo.txt')          # casa so pela pasta
+        self._write('imagens/png/contratos.png')          # casa pelo nome
+        index = search.build_index()
+        self.assertEqual([item.name for item in search.search(index, 'contratos')],
+                         ['contratos.png', 'anexo.txt'])
+
+
 if __name__ == '__main__':
     unittest.main()

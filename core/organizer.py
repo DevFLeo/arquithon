@@ -141,6 +141,15 @@ def save_org_mode(mode: str) -> None:
     config.set('org_mode', mode)
 
 
+def load_move_default() -> bool:
+    """Se a caixa "Mover em vez de copiar" já vem marcada ao abrir o app."""
+    return bool(config.get('move_default', False))
+
+
+def save_move_default(value: bool) -> None:
+    config.set('move_default', value)
+
+
 def format_category_label(rel_path: str) -> str:
     partes = rel_path.split(os.sep)
     icone = '📅' if partes[0].isdigit() else CATEGORY_ICONS.get(partes[0], '📁')
