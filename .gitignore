@@ -2,11 +2,8 @@
 MELHORIAS.md
 Revisao/
 
-# Banco de dados local
-arquivista.db
-
-# Logs
-arquivista.log
+# Configuração local (guarda só o critério de organização escolhido)
+config.json
 
 # Python
 __pycache__/
@@ -14,7 +11,7 @@ __pycache__/
 venv/
 .env
 
-# Arquivos organizados pelos usuários
+# Arquivos organizados
 uploads/
 
 # Artefatos de build do PyInstaller

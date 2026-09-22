@@ -1,72 +1,73 @@
-# Arquithon, o Arquivista em python
+# Arquithon, o Arquivista em Python
 
-Aplicação web feita em **Python + Flask** que organiza arquivos automaticamente por tipo (imagens, documentos, planilhas, compactados, etc.), com login individual por usuário. A ideia do projeto é evoluir para um **arquivista pessoal, 100% offline**, que roda localmente na sua máquina sem depender de internet ou de serviços em nuvem.
+Arquithon é um aplicativo nativo, feito em Python com Tkinter, que organiza arquivos automaticamente por tipo, data, nome ou tamanho. Não tem login, não abre navegador, não depende de internet nem de servidor: é só abrir e usar, com tudo rodando dentro do próprio executável.
 
-## Funcionalidades atuais
+## O que ele faz
 
-- Login e cadastro de usuários (senha com hash, via `werkzeug.security`)
-- Upload de múltiplos arquivos de uma vez
-- Organização automática por extensão em subpastas (`imagens/png`, `documentos/pdf`, `multimedia/audio`, etc.)
-- Pasta de upload isolada por usuário (`uploads/<id_do_usuario>/...`)
-- Painel web listando os arquivos já organizados por categoria
+Você escolhe um ou mais arquivos (ou uma pasta inteira, organizada recursivamente) pelo diálogo nativo do sistema, e o Arquithon copia cada um para a subpasta certa dentro de `uploads/`, de acordo com o critério de organização escolhido. Por tipo de arquivo, imagens vão para `imagens/png`, documentos para `documentos/pdf`, músicas para `multimedia/audio` e assim por diante — o dicionário de extensões cobre imagens, documentos, planilhas, apresentações, e-books, áudio, vídeo, arquivos compactados, código-fonte, design/CAD, executáveis e fontes. Qualquer extensão fora desse mapa cai em `outros/<extensão>`, então nada fica sem categoria.
 
-## Stack
+Além de por tipo, dá para organizar por data de modificação (agrupando em pastas de ano e mês), por nome do arquivo (ordem alfabética) ou por tamanho (pequenos, médios e grandes). O critério escolhido fica salvo em `config.json`, ao lado do executável, e é lembrado da próxima vez que o app abrir.
 
-- [Flask](https://flask.palletsprojects.com/) — servidor web (back-end)
-- [Flask-Login](https://flask-login.readthedocs.io/) — autenticação de sessão
-- [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/) — ORM / banco de dados
-- SQLite — banco de dados local (padrão)
-- Jinja2 + [water.css](https://watercss.kognise.dev/) — templates e estilo (front-end)
+Depois de organizar, o Arquithon pergunta se você quer abrir a pasta na hora, e também há um botão "Abrir Pasta de Arquivos" sempre visível. Clicar com o botão direito em qualquer categoria ou arquivo da lista abre o Explorer do Windows direto naquele lugar. Se dois arquivos organizados tiverem o mesmo nome, o segundo recebe um sufixo `(2)`, `(3)`... para nunca sobrescrever o primeiro sem avisar.
 
-## Como rodar localmente
+Por padrão os arquivos são copiados para `uploads/`, mantendo o original no lugar. Tem uma opção "Mover em vez de copiar" para quem quer tirar o arquivo da origem de vez — nesse caso o app pede confirmação antes, já que é uma ação que remove o original. Uma barra de progresso aparece durante a organização de vários arquivos, e um botão "Desfazer última organização" some quando não há nada a desfazer e some depois de usado; ele reverte exatamente a última leva (cópias são apagadas, arquivos movidos voltam para onde estavam).
 
-1. Crie e ative um ambiente virtual:
+Tem também uma busca: digite um trecho do nome (ou do conteúdo, para arquivos de texto como `.txt`, `.md`, `.py`, `.json` e afins) e o app varre tudo que já foi organizado e mostra os resultados na hora, cada um já com a categoria, o tamanho e a data de modificação. Formatos binários como PDF, DOCX ou imagens continuam pesquisáveis pelo nome, só o conteúdo deles que não é lido. A preferência de buscar também no conteúdo fica salva em `config.json`, igual ao critério de organização.
 
-   ```bash
-   python -m venv venv
-   venv\Scripts\activate      # Windows
-   ```
+Clicar com o botão direito num arquivo já organizado também oferece "Excluir arquivo" — remove definitivamente (sem lixeira), então o app sempre pede confirmação antes. Não dá para excluir uma categoria inteira de uma vez: só arquivo por arquivo, de propósito, para uma exclusão em massa não acontecer sem querer.
 
-2. Instale as dependências:
+Atalhos de teclado: `Ctrl+O` abre o seletor de arquivos, `Ctrl+F` foca o campo de busca.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Tecnologia
 
-3. Rode a aplicação:
+Tudo usa apenas a biblioteca padrão do Python — Tkinter para a interface, `json` para guardar a preferência de organização, `shutil`/`os` para mover e organizar os arquivos, `dataclasses` para o índice de busca. Nenhuma dependência externa é necessária para rodar `python app.py`; o PyInstaller só entra na hora de gerar o `.exe`.
 
-   ```bash
-   python app.py
-   ```
+O código é dividido por responsabilidade: `core/` guarda toda a regra de negócio (caminhos, organização, busca, integração com o Explorer) sem depender de Tkinter, e `ui/` guarda só a interface, que consome o `core`. Essa separação é o que torna fácil testar a lógica isoladamente (veja `tests/`) e crescer o app sem esbarrar num arquivo gigante — um novo critério de organização, por exemplo, é só uma função nova em `core/organizer.py`.
 
-4. O navegador abre sozinho em **http://127.0.0.1:5000**. Crie uma conta e comece a enviar arquivos.
+## Rodando localmente
 
-> O banco de dados SQLite (`arquivista.db`) é criado automaticamente na primeira execução.
-
-## Gerar o executável (.exe)
-
-Para distribuir como aplicativo Windows, sem exigir Python instalado na máquina do usuário:
+Com o Python instalado, basta
 
 ```bash
-pip install pyinstaller
-pyinstaller --onefile --noconsole --name Arquithon --add-data "templates;templates" --add-data "static;static" app.py
+python app.py
 ```
 
-O executável é gerado em `dist/Arquithon.exe`. Ao ser aberto, ele sobe o servidor local e abre o navegador automaticamente. O banco de dados e a pasta `uploads/` são criados **ao lado do próprio `.exe`**, então basta mover o executável para onde você quiser que os arquivos fiquem.
+A janela abre direto no organizador — não existe tela de login.
+
+## Gerando o executável
+
+Para distribuir como aplicativo Windows, sem exigir Python na máquina de quem for usar
+
+```bash
+pip install -r requirements.txt
+python -m PyInstaller Arquithon.spec
+```
+
+O executável sai em `dist/Arquithon.exe`. Ao abrir, a pasta `uploads/` e o arquivo `config.json` são criados ao lado do próprio `.exe`, então basta mover o executável para onde você quiser manter os arquivos organizados.
 
 ## Estrutura do projeto
 
 ```
 arquithon/
-├── app.py              # rotas, autenticação e lógica de organização (back-end)
-├── requirements.txt    # dependências Python
-├── templates/           # páginas HTML (front-end)
-│   ├── index.html
-│   ├── login.html
-│   └── register.html
-└── uploads/             # arquivos organizados por usuário (criado em tempo de execução)
+├── app.py               ponto de entrada, só sobe a janela
+├── core/                regra de negócio, sem Tkinter
+│   ├── paths.py          onde ficam uploads/ e config.json
+│   ├── config.py         leitura/escrita do config.json
+│   ├── organizer.py      dicionário de extensões e critérios de organização
+│   ├── search.py         indexação e busca nos arquivos organizados
+│   └── fs_utils.py        abrir pastas/arquivos no Explorer
+├── ui/                  interface Tkinter, consome o core
+│   ├── styles.py
+│   ├── app_window.py
+│   └── main_frame.py
+├── tests/               testes de core/ (unittest, sem dependências externas)
+├── Arquithon.spec       configuração do PyInstaller para gerar o .exe
+├── requirements.txt     dependência de build (pyinstaller)
+└── uploads/             arquivos organizados (criado em tempo de execução)
 ```
 
-## Status do projeto
+Para rodar os testes: `python -m unittest discover`.
 
-O código atual já inclui configuração para deploy em nuvem (Render + PostgreSQL). O objetivo é reorganizar o projeto para priorizar o **uso local/offline** como modo principal, mantendo o deploy em nuvem como opção secundária. Detalhes em [MELHORIAS.md](MELHORIAS.md).
+## Status
+
+O projeto já passou por uma versão web (Flask + HTML, com deploy em nuvem) e por uma versão com login por usuário. A versão atual prioriza simplicidade: um aplicativo offline, sem contas, sem servidor, para uso pessoal direto na máquina.
