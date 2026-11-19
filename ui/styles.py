@@ -16,16 +16,16 @@ FAMILY = 'Segoe UI'
 
 PALETTES = {
     'claro': {
-        'bg': '#f2f4f9', 'card': '#ffffff', 'field': '#ffffff',
-        'primary': '#2f6fed', 'primary_dark': '#1d4fbe',
-        'text': '#1f2937', 'muted': '#6b7280', 'border': '#dfe3ee',
-        'selection': '#2f6fed', 'selection_text': '#ffffff',
+        'bg': '#f4f5f9', 'sidebar': '#ebedf4', 'card': '#ffffff', 'field': '#f4f5f9',
+        'primary': '#6d4aff', 'primary_dark': '#5a39e0', 'primary_soft': '#e9e4ff',
+        'text': '#171a24', 'muted': '#6a7184', 'border': '#dcdfea', 'hover': '#e4e7f1',
+        'selection': '#6d4aff', 'selection_text': '#ffffff', 'danger': '#d6455d',
     },
     'escuro': {
-        'bg': '#161a23', 'card': '#212736', 'field': '#2b3243',
-        'primary': '#4b82f0', 'primary_dark': '#3a6ad4',
-        'text': '#e8eaf0', 'muted': '#9aa3b2', 'border': '#39414f',
-        'selection': '#4b82f0', 'selection_text': '#ffffff',
+        'bg': '#0d0e12', 'sidebar': '#14151b', 'card': '#181a21', 'field': '#101117',
+        'primary': '#7c5cff', 'primary_dark': '#6747f0', 'primary_soft': '#2a2352',
+        'text': '#eceef4', 'muted': '#8d93a5', 'border': '#272a35', 'hover': '#20232d',
+        'selection': '#7c5cff', 'selection_text': '#ffffff', 'danger': '#ef6b80',
     },
 }
 
@@ -39,7 +39,7 @@ FONT_SIZE_PX = dict(FONT_SIZES)
 FONT_SIZE_LABEL_BY_KEY = dict(FONT_SIZE_LABELS)
 FONT_SIZE_KEY_BY_LABEL = {label: key for key, label in FONT_SIZE_LABELS}
 
-DEFAULT_THEME = 'claro'
+DEFAULT_THEME = 'escuro'
 DEFAULT_FONT_SIZE = 'media'
 
 # Paleta e tamanho em vigor. Widgets que não são ttk (o rótulo da área de
@@ -103,52 +103,130 @@ def apply(root) -> None:
                     background=COLORS['card'], foreground=COLORS['muted'])
     style.configure('Section.TLabel', font=(FAMILY, base + 1, 'bold'),
                     background=COLORS['bg'], foreground=COLORS['text'])
+    style.configure('Step.TLabel', font=(FAMILY, base - 2, 'bold'),
+                    background=COLORS['bg'], foreground=COLORS['primary'])
     style.configure('CardTitle.TLabel', font=(FAMILY, base + 2, 'bold'),
                     background=COLORS['card'], foreground=COLORS['text'])
 
     style.configure('TSeparator', background=COLORS['border'])
     style.configure('TEntry', fieldbackground=COLORS['field'], foreground=COLORS['text'],
-                    insertcolor=COLORS['text'], padding=8,
-                    bordercolor=COLORS['border'], relief='flat')
-    style.configure('TCombobox', fieldbackground=COLORS['field'], foreground=COLORS['text'],
-                    background=COLORS['card'], arrowcolor=COLORS['text'], padding=6)
-    style.map('TCombobox', fieldbackground=[('readonly', COLORS['field'])],
-              foreground=[('readonly', COLORS['text'])])
+                    insertcolor=COLORS['text'], padding=9, bordercolor=COLORS['border'],
+                    lightcolor=COLORS['border'], darkcolor=COLORS['border'], relief='flat')
+    style.map('TEntry', bordercolor=[('focus', COLORS['primary'])],
+              lightcolor=[('focus', COLORS['primary'])], darkcolor=[('focus', COLORS['primary'])])
+    style.configure('TCombobox', fieldbackground=COLORS['field'], background=COLORS['field'],
+                    foreground=COLORS['text'], arrowcolor=COLORS['muted'], arrowsize=14,
+                    bordercolor=COLORS['border'], lightcolor=COLORS['field'],
+                    darkcolor=COLORS['field'], padding=(8, 6))
+    style.map('TCombobox',
+              fieldbackground=[('readonly', COLORS['field'])],
+              background=[('active', COLORS['hover']), ('readonly', COLORS['field'])],
+              foreground=[('readonly', COLORS['text'])],
+              selectbackground=[('readonly', COLORS['field'])],
+              selectforeground=[('readonly', COLORS['text'])],
+              bordercolor=[('focus', COLORS['primary'])],
+              arrowcolor=[('active', COLORS['text'])])
     style.configure('TCheckbutton', background=COLORS['card'], foreground=COLORS['text'],
-                    indicatorcolor=COLORS['field'], font=(FAMILY, base))
+                    indicatorbackground=COLORS['field'], font=(FAMILY, base))
     style.map('TCheckbutton', background=[('active', COLORS['card'])],
-              indicatorcolor=[('selected', COLORS['primary'])])
+              indicatorbackground=[('selected', COLORS['primary'])])
+
+    style.configure('Sidebar.TFrame', background=COLORS['sidebar'])
+    style.configure('Sidebar.TLabel', background=COLORS['sidebar'], foreground=COLORS['text'])
+    style.configure('SidebarTitle.TLabel', font=(FAMILY, base + 6, 'bold'),
+                    background=COLORS['sidebar'], foreground=COLORS['text'])
+    style.configure('SidebarMuted.TLabel', background=COLORS['sidebar'], foreground=COLORS['muted'],
+                    font=(FAMILY, base - 1))
+    style.configure('Stat.TLabel', font=(FAMILY, base + 8, 'bold'),
+                    background=COLORS['sidebar'], foreground=COLORS['primary'])
+    style.configure('Border.TFrame', background=COLORS['border'])
+    style.configure('Hint.TLabel', background=COLORS['bg'], foreground=COLORS['muted'],
+                    font=(FAMILY, base - 1))
+
+    style.configure('Sidebar.TCheckbutton', background=COLORS['sidebar'], foreground=COLORS['text'],
+                    indicatorbackground=COLORS['field'], font=(FAMILY, base))
+    style.map('Sidebar.TCheckbutton', background=[('active', COLORS['sidebar'])],
+              indicatorbackground=[('selected', COLORS['primary'])])
+    style.configure('App.TCheckbutton', background=COLORS['bg'], foreground=COLORS['text'],
+                    indicatorbackground=COLORS['field'], font=(FAMILY, base))
+    style.map('App.TCheckbutton', background=[('active', COLORS['bg'])],
+              indicatorbackground=[('selected', COLORS['primary'])])
 
     style.configure('Accent.TButton', font=(FAMILY, base, 'bold'),
                     background=COLORS['primary'], foreground='white',
-                    padding=(14, 8), borderwidth=0)
+                    padding=(16, 9), borderwidth=0, focuscolor=COLORS['primary'])
     style.map('Accent.TButton',
-              background=[('active', COLORS['primary_dark']), ('disabled', COLORS['border'])])
-
-    style.configure('Secondary.TButton', font=(FAMILY, base),
-                    background=COLORS['card'], foreground=COLORS['primary'],
-                    bordercolor=COLORS['border'], padding=(12, 7), borderwidth=1)
-    style.map('Secondary.TButton', background=[('active', COLORS['bg'])],
+              background=[('active', COLORS['primary_dark']), ('disabled', COLORS['border'])],
               foreground=[('disabled', COLORS['muted'])])
 
-    style.configure('Treeview', font=(FAMILY, base), rowheight=base * 2 + 6,
+    style.configure('Secondary.TButton', font=(FAMILY, base),
+                    background=COLORS['card'], foreground=COLORS['text'],
+                    bordercolor=COLORS['border'], lightcolor=COLORS['card'],
+                    darkcolor=COLORS['card'], padding=(12, 8), borderwidth=1,
+                    focuscolor=COLORS['card'])
+    style.map('Secondary.TButton', background=[('active', COLORS['hover'])],
+              foreground=[('disabled', COLORS['muted'])])
+
+    # Botões de navegação da barra lateral: planos, só destacam ao passar o mouse.
+    style.configure('Nav.TButton', font=(FAMILY, base), anchor='w',
+                    background=COLORS['sidebar'], foreground=COLORS['text'],
+                    padding=(12, 9), borderwidth=0, focuscolor=COLORS['sidebar'])
+    style.map('Nav.TButton', background=[('active', COLORS['hover'])],
+              foreground=[('disabled', COLORS['muted'])])
+    style.configure('NavPrimary.TButton', font=(FAMILY, base, 'bold'), anchor='w',
+                    background=COLORS['primary'], foreground='white',
+                    padding=(12, 10), borderwidth=0, focuscolor=COLORS['primary'])
+    style.map('NavPrimary.TButton', background=[('active', COLORS['primary_dark'])])
+
+    style.configure('Treeview', font=(FAMILY, base), rowheight=base * 2 + 14,
+                    bordercolor=COLORS['border'], lightcolor=COLORS['card'], darkcolor=COLORS['card'],
                     background=COLORS['card'], fieldbackground=COLORS['card'],
                     foreground=COLORS['text'], borderwidth=0)
     style.map('Treeview', background=[('selected', COLORS['selection'])],
               foreground=[('selected', COLORS['selection_text'])])
-    style.configure('Treeview.Heading', font=(FAMILY, base, 'bold'),
-                    background=COLORS['bg'], foreground=COLORS['text'])
+    style.configure('Treeview.Heading', font=(FAMILY, base - 1, 'bold'), relief='flat',
+                    background=COLORS['sidebar'], foreground=COLORS['muted'], padding=(8, 6))
+    style.map('Treeview.Heading', background=[('active', COLORS['hover'])])
 
-    style.configure('TScrollbar', background=COLORS['card'], troughcolor=COLORS['bg'],
-                    bordercolor=COLORS['border'], arrowcolor=COLORS['text'])
+    for sb in ('TScrollbar', 'Vertical.TScrollbar'):
+        style.configure(sb, background=COLORS['border'], troughcolor=COLORS['card'],
+                        bordercolor=COLORS['card'], lightcolor=COLORS['border'],
+                        darkcolor=COLORS['border'], arrowcolor=COLORS['muted'],
+                        gripcount=0, arrowsize=12, relief='flat')
+        style.map(sb, background=[('active', COLORS['muted'])])
+
+    # Caixinhas de marcar: no tema clam as cores do quadradinho têm nomes próprios.
+    for nome, fundo in (('TCheckbutton', COLORS['card']), ('Sidebar.TCheckbutton', COLORS['sidebar']),
+                        ('App.TCheckbutton', COLORS['bg'])):
+        style.configure(nome, indicatorforeground='white', indicatormargin=(0, 0, 8, 0),
+                        upperbordercolor=COLORS['muted'], lowerbordercolor=COLORS['muted'],
+                        focuscolor=fundo, padding=(0, 2))
+        style.map(nome, indicatorbackground=[('selected', COLORS['primary']), ('', COLORS['field'])],
+                  upperbordercolor=[('selected', COLORS['primary'])],
+                  lowerbordercolor=[('selected', COLORS['primary'])])
     style.configure('TProgressbar', background=COLORS['primary'],
-                    troughcolor=COLORS['bg'], borderwidth=0, thickness=8)
+                    troughcolor=COLORS['border'], borderwidth=0, thickness=6)
 
 
-def style_drop_zone(label) -> None:
-    """A área de soltar é um tk.Label, então não segue estilo nomeado."""
-    label.configure(bg=COLORS['card'], fg=COLORS['muted'],
-                    highlightbackground=COLORS['border'], font=(FAMILY, BASE_SIZE))
+def style_drop_zone(zone, hover=False) -> None:
+    """A área de soltar é Tk clássico (moldura + rótulos), então não segue estilo nomeado."""
+    fundo = COLORS['primary_soft'] if hover else COLORS['card']
+    zone.configure(bg=fundo, highlightbackground=COLORS['primary'] if hover else COLORS['border'],
+                   highlightcolor=COLORS['primary'])
+    fontes = {'icon': (FAMILY, BASE_SIZE + 14), 'title': (FAMILY, BASE_SIZE + 2, 'bold'),
+              'sub': (FAMILY, BASE_SIZE)}
+    cores = {'icon': COLORS['primary'], 'title': COLORS['text'], 'sub': COLORS['muted']}
+    for filho in zone.winfo_children():
+        papel = getattr(filho, 'role', 'sub')
+        if papel == 'img':
+            filho.configure(bg=fundo)
+            continue
+        filho.configure(bg=fundo, fg=cores[papel], font=fontes[papel])
+
+
+def style_plain(widget, bg, fg, delta=0, weight='normal') -> None:
+    """Rótulos Tk clássicos soltos (logo, dica da busca, aviso de lista vazia)."""
+    widget.configure(bg=COLORS[bg], fg=COLORS[fg], font=(FAMILY, BASE_SIZE + delta, weight))
 
 
 def style_menu(menu) -> None:
