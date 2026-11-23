@@ -87,9 +87,9 @@ class _ResultDialog(tk.Toplevel):
         self.ok_btn = ttk.Button(linha, text='OK', style='Accent.TButton',
                                  command=lambda: self._escolher('ok'))
         self.ok_btn.pack(side='right')
-        ttk.Button(linha, text='📂 Abrir pasta', style='Secondary.TButton',
+        ttk.Button(linha, text='Abrir pasta', style='Secondary.TButton',
                    command=lambda: self._escolher('abrir')).pack(side='right', padx=(0, 10))
-        ttk.Button(linha, text='↩️ Reverter', style='Secondary.TButton',
+        ttk.Button(linha, text='Reverter', style='Secondary.TButton',
                    command=lambda: self._escolher('reverter')).pack(side='right', padx=(0, 10))
 
     def _centralizar(self, parent):

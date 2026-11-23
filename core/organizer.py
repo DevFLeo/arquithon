@@ -1,9 +1,9 @@
-"""Organização de arquivos: para onde cada arquivo vai, e como chegar lá.
+"""Organização de arquivos e preservação intacta de projetos de código.
 
 O critério de organização é plugável: cada modo é só uma função que recebe
-(nome, caminho) e devolve a subpasta de destino. Adicionar um novo critério é
-escrever uma função e registrá-la em `ORG_MODE_FUNCS` — o resto do app
-(interface, persistência da preferência) não precisa mudar.
+(nome, caminho) e devolve a subpasta de destino. Pastas identificadas como
+projetos de código vão inteiras para `codigo/projetos/<nome_do_projeto>` sem
+reorganizar seus arquivos internos.
 """
 
 import os
@@ -11,11 +11,11 @@ import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from core import config, paths
+from core import config, fs_utils, paths
 
-# Extensão -> subpasta de destino no modo "por tipo de arquivo". O que não
-# estiver aqui vai para "outros/<extensao>", então nenhum arquivo fica sem
-# categoria.
+PROJECT_DEST_REL = 'codigo/projetos'
+
+# Extensão -> subpasta de destino no modo "por tipo de arquivo".
 EXTENSION_MAP = {
     # Imagens
     'png': 'imagens/png', 'jpg': 'imagens/jpg_jpeg', 'jpeg': 'imagens/jpg_jpeg',
@@ -70,11 +70,10 @@ EXTENSION_MAP = {
     'ttf': 'fontes', 'otf': 'fontes', 'woff': 'fontes', 'woff2': 'fontes',
 }
 
-# Ícone por categoria de topo, só para exibição na árvore.
 CATEGORY_ICONS = {
-    'imagens': '🖼️', 'documentos': '📄', 'multimedia': '🎬', 'compactados': '🗜️',
-    'codigo': '💻', 'design': '🎨', 'executaveis': '⚙️', 'fontes': '🔤',
-    'outros': '📦', 'alfabetico': '🔤', 'tamanho': '📏',
+    'imagens': 'IMG', 'documentos': 'DOC', 'multimedia': 'MID', 'compactados': 'ZIP',
+    'codigo': 'COD', 'design': 'CAD', 'executaveis': 'EXE', 'fontes': 'FNT',
+    'outros': 'ARQ', 'alfabetico': 'A-Z', 'tamanho': 'TAM',
 }
 
 MESES = [
@@ -113,7 +112,6 @@ def _dest_by_size(filename: str, path: str) -> str:
     return 'tamanho/grandes (mais de 50MB)'
 
 
-# Critérios de organização disponíveis na interface, em ordem de exibição.
 ORG_MODES = [
     ('extensao', 'Tipo de arquivo (extensão)'),
     ('data', 'Data de modificação (ano / mês)'),
@@ -132,7 +130,6 @@ DEFAULT_ORG_MODE = ORG_MODES[0][0]
 
 
 def load_org_mode() -> str:
-    """Recupera o último critério de organização escolhido pelo usuário."""
     mode = config.get('org_mode')
     return mode if mode in ORG_MODE_FUNCS else DEFAULT_ORG_MODE
 
@@ -142,7 +139,6 @@ def save_org_mode(mode: str) -> None:
 
 
 def load_move_default() -> bool:
-    """Se a caixa "Mover em vez de copiar" já vem marcada ao abrir o app."""
     return bool(config.get('move_default', False))
 
 
@@ -150,15 +146,20 @@ def save_move_default(value: bool) -> None:
     config.set('move_default', value)
 
 
+def _capitalizar_primeira_letra(texto: str) -> str:
+    for i, ch in enumerate(texto):
+        if ch.isalpha():
+            return texto[:i] + ch.upper() + texto[i + 1:]
+    return texto
+
+
 def format_category_label(rel_path: str) -> str:
     partes = rel_path.split(os.sep)
-    icone = '📅' if partes[0].isdigit() else CATEGORY_ICONS.get(partes[0], '📁')
-    texto = ' › '.join(p if p.isdigit() else p.capitalize() for p in partes)
-    return f'{icone} {texto}'
+    texto = ' › '.join(_capitalizar_primeira_letra(p) for p in partes)
+    return texto
 
 
 def format_file_size(size_bytes: int) -> str:
-    """Formata um tamanho em bytes como '3.4 MB', '512 KB' etc."""
     size = float(size_bytes)
     for unidade in ('B', 'KB', 'MB'):
         if size < 1024:
@@ -168,25 +169,38 @@ def format_file_size(size_bytes: int) -> str:
 
 
 def format_modified_date(timestamp: float) -> str:
-    """Formata a data de modificação de um arquivo como 'dd/mm/aaaa'."""
     return datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y')
 
 
 def delete_file(path: str) -> None:
-    """Remove definitivamente um arquivo já organizado. Levanta OSError se falhar.
-
-    Sem lixeira: quem chama (a UI) precisa confirmar com o usuário antes,
-    deixando claro que não há como desfazer pelo próprio Arquithon.
-    """
-    os.remove(path)
+    """Remove definitivamente um arquivo ou projeto organizado."""
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    else:
+        os.remove(path)
 
 
 def scan_organized_files() -> dict:
-    """Mapeia cada subpasta já organizada para a lista de arquivos nela."""
+    """Mapeia cada subpasta já organizada para a lista de itens nela.
+
+    Projetos de código em `codigo/projetos/<nome>` aparecem como um único item
+    de projeto na categoria `codigo\\projetos`, sem listar milhares de arquivos
+    internos como node_modules.
+    """
     if not os.path.isdir(paths.UPLOAD_FOLDER):
         return {}
     organized = {}
+    projetos_root = os.path.normpath(os.path.join(paths.UPLOAD_FOLDER, 'codigo', 'projetos'))
+
     for root, dirs, files in os.walk(paths.UPLOAD_FOLDER):
+        norm_root = os.path.normpath(root)
+        if norm_root == projetos_root:
+            if dirs:
+                rel_proj = os.path.relpath(projetos_root, paths.UPLOAD_FOLDER)
+                organized[rel_proj] = sorted(dirs)
+            dirs[:] = []  # Não desce para dentro das pastas de projeto!
+            continue
+
         if not files:
             continue
         rel_path = os.path.relpath(root, paths.UPLOAD_FOLDER)
@@ -197,12 +211,6 @@ def scan_organized_files() -> dict:
 
 
 def _unique_destination(dest_dir: str, filename: str) -> str:
-    """Evita sobrescrever um arquivo já organizado com o mesmo nome.
-
-    Duas fontes diferentes podem ter um arquivo chamado igual (ex.: duas
-    fotos "foto.jpg" em pastas distintas). Sem isso, a segunda cópia apagaria
-    a primeira sem aviso nenhum.
-    """
     candidate = os.path.join(dest_dir, filename)
     if not os.path.exists(candidate):
         return candidate
@@ -218,10 +226,11 @@ def _unique_destination(dest_dir: str, filename: str) -> str:
 
 @dataclass
 class Operation:
-    """Uma cópia ou mudança de arquivo já concluída, para permitir desfazer."""
+    """Uma cópia ou mudança de arquivo/projeto já concluída, para permitir desfazer."""
     source: str
     destination: str
     moved: bool
+    is_project: bool = False
 
 
 @dataclass
@@ -233,11 +242,11 @@ class OrganizeResult:
 
 def organize_files(file_paths, mode: str = DEFAULT_ORG_MODE, move: bool = False,
                     on_progress=None) -> OrganizeResult:
-    """Copia (ou move) os arquivos para as subpastas certas.
+    """Copia (ou move) arquivos e projetos de código para as subpastas certas.
 
-    `on_progress`, se dado, é chamado como `on_progress(feito, total)` após
-    cada arquivo processado — usado pela UI para atualizar uma barra de
-    progresso sem precisar rodar isso em outra thread.
+    Se um item de `file_paths` for uma pasta identificada como projeto de código
+    (`fs_utils.is_code_project`), a pasta inteira é colocada em `codigo/projetos/<nome>`
+    sem desmontar ou reorganizar seus arquivos internos.
     """
     func = ORG_MODE_FUNCS.get(mode, _dest_by_extension)
     file_paths = list(file_paths)
@@ -246,17 +255,32 @@ def organize_files(file_paths, mode: str = DEFAULT_ORG_MODE, move: bool = False,
     operations = []
     for i, path in enumerate(file_paths, start=1):
         try:
-            filename = os.path.basename(path)
-            destino_relativo = func(filename, path)
-            destino_absoluto = os.path.join(paths.UPLOAD_FOLDER, *destino_relativo.split('/'))
-            os.makedirs(destino_absoluto, exist_ok=True)
-            destino_arquivo = _unique_destination(destino_absoluto, filename)
-            if move:
-                shutil.move(path, destino_arquivo)
+            norm_path = os.path.normpath(path)
+            if os.path.isdir(norm_path) and fs_utils.is_code_project(norm_path):
+                folder_name = os.path.basename(norm_path)
+                destino_absoluto = os.path.join(paths.UPLOAD_FOLDER, *PROJECT_DEST_REL.split('/'))
+                os.makedirs(destino_absoluto, exist_ok=True)
+                destino_projeto = _unique_destination(destino_absoluto, folder_name)
+                if move:
+                    shutil.move(norm_path, destino_projeto)
+                else:
+                    shutil.copytree(norm_path, destino_projeto)
+                operations.append(
+                    Operation(source=norm_path, destination=destino_projeto, moved=move, is_project=True)
+                )
+                successful += 1
             else:
-                shutil.copy2(path, destino_arquivo)
-            operations.append(Operation(source=path, destination=destino_arquivo, moved=move))
-            successful += 1
+                filename = os.path.basename(path)
+                destino_relativo = func(filename, path)
+                destino_absoluto = os.path.join(paths.UPLOAD_FOLDER, *destino_relativo.split('/'))
+                os.makedirs(destino_absoluto, exist_ok=True)
+                destino_arquivo = _unique_destination(destino_absoluto, filename)
+                if move:
+                    shutil.move(path, destino_arquivo)
+                else:
+                    shutil.copy2(path, destino_arquivo)
+                operations.append(Operation(source=path, destination=destino_arquivo, moved=move))
+                successful += 1
         except OSError:
             failed += 1
         finally:
@@ -266,7 +290,6 @@ def organize_files(file_paths, mode: str = DEFAULT_ORG_MODE, move: bool = False,
 
 
 def _prune_empty_dirs(start_dir: str) -> None:
-    """Remove `start_dir` e seus pais vazios, sem nunca sair de dentro de uploads/."""
     current = os.path.normpath(start_dir)
     boundary = os.path.normpath(paths.UPLOAD_FOLDER)
     while current != boundary and current.startswith(boundary + os.sep):
@@ -278,12 +301,7 @@ def _prune_empty_dirs(start_dir: str) -> None:
 
 
 def undo_operations(operations: list[Operation]) -> tuple[int, int]:
-    """Desfaz operações de organização, da mais recente para a mais antiga.
-
-    Arquivo copiado: a cópia é apagada, o original nunca foi tocado.
-    Arquivo movido: volta para o caminho de origem.
-    Retorna (desfeitos, falhas).
-    """
+    """Desfaz operações de organização (arquivos avulsos e pastas de projeto)."""
     restored, failed = 0, 0
     for op in reversed(operations):
         try:
@@ -291,7 +309,10 @@ def undo_operations(operations: list[Operation]) -> tuple[int, int]:
                 os.makedirs(os.path.dirname(op.source), exist_ok=True)
                 shutil.move(op.destination, op.source)
             else:
-                os.remove(op.destination)
+                if op.is_project or os.path.isdir(op.destination):
+                    shutil.rmtree(op.destination)
+                else:
+                    os.remove(op.destination)
         except OSError:
             failed += 1
         else:

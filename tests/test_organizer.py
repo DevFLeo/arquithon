@@ -142,6 +142,38 @@ class OrganizerTestCase(unittest.TestCase):
         with self.assertRaises(OSError):
             organizer.delete_file(os.path.join(paths.UPLOAD_FOLDER, 'nao_existe.txt'))
 
+    def test_format_category_label_preserva_siglas_e_capitaliza_mes(self):
+        rotulo_tam = organizer.format_category_label(
+            os.path.join('tamanho', 'pequenos (menos de 1MB)')
+        )
+        self.assertIn('Pequenos (menos de 1MB)', rotulo_tam)
+        rotulo_data = organizer.format_category_label(
+            os.path.join('2026', '11 - novembro')
+        )
+        self.assertIn('11 - Novembro', rotulo_data)
+
+    def test_projeto_de_codigo_e_mantido_inteiro_sem_desmontar(self):
+        projeto = os.path.join(self.source_dir, 'sistema_web')
+        os.makedirs(os.path.join(projeto, 'src'))
+        with open(os.path.join(projeto, 'package.json'), 'w') as f:
+            f.write('{"name": "sistema"}')
+        with open(os.path.join(projeto, 'src', 'index.ts'), 'w') as f:
+            f.write('console.log(1)')
+        with open(os.path.join(projeto, 'banner.png'), 'wb') as f:
+            f.write(b'img')
+
+        itens = organizer.fs_utils.collect_files([projeto])
+        resultado = organizer.organize_files(itens, mode='extensao')
+        self.assertEqual((resultado.successful, resultado.failed), (1, 0))
+
+        destino_esperado = os.path.join(paths.UPLOAD_FOLDER, 'codigo', 'projetos', 'sistema_web')
+        self.assertTrue(os.path.isdir(destino_esperado))
+        self.assertTrue(os.path.isfile(os.path.join(destino_esperado, 'package.json')))
+        self.assertTrue(os.path.isfile(os.path.join(destino_esperado, 'src', 'index.ts')))
+        self.assertTrue(os.path.isfile(os.path.join(destino_esperado, 'banner.png')))
+        # O banner.png interno ao projeto NÃO foi arrancado para imagens/png!
+        self.assertFalse(os.path.exists(os.path.join(paths.UPLOAD_FOLDER, 'imagens', 'png', 'banner.png')))
+
 
 if __name__ == '__main__':
     unittest.main()

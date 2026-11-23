@@ -1,4 +1,4 @@
-"""Janela principal: só monta a moldura e entrega o conteúdo ao MainFrame."""
+"""Janela principal: só monta a moldura e entrega o conteúdo ao MainFrame (v3.0)."""
 
 import tkinter as tk
 
@@ -9,10 +9,9 @@ from ui.main_frame import MainFrame
 class ArquithonApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title('Arquithon 2.1 - Arquivista Digital')
-        self.geometry('1000x700')
+        self.title('Arquithon 3.0 - Arquivista Digital')
+        self.geometry('1020x720')
         self.minsize(820, 560)
-        # Ícone da janela e da barra de tarefas (vale também para os diálogos).
         self._icons = [icon.photo(self, s) for s in (16, 32, 64)]
         self.iconphoto(True, *self._icons)
 

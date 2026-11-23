@@ -60,6 +60,20 @@ class FsUtilsTestCase(unittest.TestCase):
     def test_collect_files_ignora_caminho_inexistente(self):
         self.assertEqual(fs_utils.collect_files([os.path.join(self.tmp_dir, 'fantasma.txt')]), [])
 
+    def test_collect_files_preserva_pasta_de_projeto_de_codigo_inteira(self):
+        projeto = os.path.join(self.tmp_dir, 'meu_app_python')
+        os.makedirs(os.path.join(projeto, 'src'))
+        with open(os.path.join(projeto, 'requirements.txt'), 'w') as f:
+            f.write('pyinstaller>=6.0')
+        with open(os.path.join(projeto, 'src', 'main.py'), 'w') as f:
+            f.write('print("ok")')
+        with open(os.path.join(projeto, 'logo.png'), 'wb') as f:
+            f.write(b'png')
+
+        self.assertTrue(fs_utils.is_code_project(projeto))
+        coletados = fs_utils.collect_files([projeto])
+        self.assertEqual(coletados, [os.path.normpath(projeto)])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -17,3 +17,7 @@ uploads/
 # Artefatos de build do PyInstaller
 build/
 dist/
+
+# Node / Remotion
+video/node_modules/
+
